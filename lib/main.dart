@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Compiler',
+      title: 'CodePilot',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -96,7 +96,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('CodeRunner'),
+        title: Text('CodePilot'),
         elevation: 10,
         shadowColor: Theme.of(context).primaryColor.withOpacity(0.5),
         toolbarHeight: 40,
