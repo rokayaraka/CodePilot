@@ -1,4 +1,5 @@
 import 'package:codepilot/api_services.dart';
+import 'package:codepilot/drawer.dart';
 import 'package:codepilot/editor.dart';
 import 'package:codepilot/models/language.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +28,7 @@ class MyApp extends StatelessWidget {
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.blueGrey,
       ),
       themeMode: ThemeMode.dark,
       home: MyHomePage(),
@@ -169,6 +170,15 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.grey,
                   ),
                 ),
+          IconButton(onPressed: (){
+            setState(() {
+              _codeController.clear();
+            });
+
+          }, 
+          icon: Icon(Icons.cleaning_services)
+          ),
+
           IconButton(
             onPressed: () {
               setState(() {
@@ -245,13 +255,16 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
       ),
-      drawer: Drawer(
-        child: Container(
-          padding: EdgeInsets.only(top: 20.0),
-          color: Theme.of(context).canvasColor,
-          child: Text("Files"),
-        ),
+      drawer: SaveCode(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: (){},
+        elevation: 10,
+        
+        backgroundColor: Colors.black12.withOpacity(.2),
+        child: Icon(Icons.save,color: Colors.grey.shade100,),
+        
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.miniEndFloat,
     );
   }
 }
