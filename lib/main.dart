@@ -4,6 +4,8 @@ import 'package:codepilot/editor.dart';
 import 'package:codepilot/models/language.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hive_flutter/adapters.dart';
+import 'package:codepilot/models/code.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,6 +13,10 @@ void main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
+  await Hive.initFlutter();
+  Hive.registerAdapter(LanguageAdapter());
+  Hive.registerAdapter(CodeAdapter());
+  await Hive.openBox<Code>('codes');
   runApp(MyApp());
 }
 
@@ -45,11 +51,13 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  Icon sideBarIcon=Icon(Icons.view_sidebar);
+  final List<Code> savedFile = [];
+  Icon sideBarIcon = Icon(Icons.view_sidebar);
   late Future<List<Language>> languagesFuture;
   Language? selectedLanguage;
   final TextEditingController _codeController = TextEditingController(text: "");
   final TextEditingController _inputController = TextEditingController();
+  final TextEditingController _fileNameController = TextEditingController();
   String _output = "Output will be displayed here";
   bool isSideBarOn = true;
   bool isLoading = false;
@@ -57,6 +65,116 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     languagesFuture = ApiServices.fetchLanguages();
+    final box = Hive.box<Code>('codes');
+    savedFile.clear();
+    savedFile.addAll(box.values);
+  }
+  @override
+  void dispose() {
+    _codeController.dispose();
+    _inputController.dispose();
+    _fileNameController.dispose();
+    super.dispose();
+  }
+
+  void openSavedFile(Code code) {
+    setState(() {
+      _codeController.text = code.code;
+      selectedLanguage = code.language;
+      _inputController.text = ""; // Clear input field
+      _output = "Output will be displayed here"; // Reset output
+    });
+  }
+
+  void saveFile() {
+    showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+              title: Text(
+                'Save File',
+                textAlign: TextAlign.center,
+              ),
+              content: TextField(
+                controller: _fileNameController,
+                decoration: InputDecoration(hintText: 'Enter file name'),
+              ),
+              actions: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        final fileName = _fileNameController.text.trim();
+                        if (fileName.isNotEmpty&& selectedLanguage!=null) {
+                          final box = Hive.box<Code>('codes');
+                          box.put(
+                              fileName,
+                              Code(
+                                  fileName: fileName,
+                                  code: _codeController.text,
+                                  date: DateTime.now(),
+                                  language: selectedLanguage!));
+                          setState(() {
+                            savedFile.add(box.get(fileName)!);
+                            _fileNameController.clear();
+                          });
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text(
+                                  'File saved successfully',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            )
+                            , duration: Duration(seconds: 2),
+                            backgroundColor: Colors.green,
+                            ),
+                          );
+                          Navigator.of(ctx).pop();
+                        }
+                        else {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.error, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Please enter a file name or select language first',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                                      duration: Duration(seconds: 2),
+                                      backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      child: Text('Save'),
+                    ),
+                    SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                      },
+                      child: Text('Cancel'),
+                    ),
+                  ],
+                ),
+              ],
+            ));
   }
 
   void _runcode() async {
@@ -66,14 +184,20 @@ class _MyHomePageState extends State<MyHomePage> {
     if (selectedLanguage == null) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Row(
-          children: [
-            Icon(Icons.error, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Please select a language',style: TextStyle(color: Colors.white,fontSize: 20,fontWeight: FontWeight.bold),),
-          ],
-        ),
-
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 8),
+              Text(
+                'Please select a language',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
           duration: Duration(seconds: 2),
           backgroundColor: Colors.red,
         ),
@@ -115,6 +239,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           height: 24,
                           child: CircularProgressIndicator(strokeWidth: 2))),
                 );
+                
               } else if (snapshot.hasError) {
                 return IconButton(
                   onPressed: () {
@@ -128,9 +253,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 final languages = snapshot.data!;
                 return DropdownButtonHideUnderline(
                   child: DropdownButton<Language>(
-                    value: selectedLanguage ?? (selectedLanguage = languages.first),
+                    value: languages.contains(selectedLanguage)
+                        ? selectedLanguage
+                        : languages.first,
                     dropdownColor: Theme.of(context).canvasColor,
-                    icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade300),
+                    icon: Icon(Icons.arrow_drop_down,
+                        color: Colors.grey.shade300),
                     items: languages.map((lang) {
                       return DropdownMenuItem<Language>(
                         value: lang,
@@ -171,33 +299,24 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.grey,
                   ),
                 ),
-          IconButton(onPressed: (){
-            setState(() {
-              _codeController.clear();
-              _inputController.clear();
-              _output = "Output will be displayed here";
-            });
-
-          }, 
-          icon: Icon(Icons.cleaning_services)
-          ),
-          IconButton(onPressed: (){
-            setState(() {
-              
-            });
-
-          }, 
-          icon: Icon(Icons.save)
-          ),
+          IconButton(
+              onPressed: () {
+                setState(() {
+                  _codeController.clear();
+                  _inputController.clear();
+                  _output = "Output will be displayed here";
+                });
+              },
+              icon: Icon(Icons.cleaning_services)),
+          IconButton(onPressed: saveFile, icon: Icon(Icons.save)),
           IconButton(
             onPressed: () {
               setState(() {
                 isSideBarOn = !isSideBarOn;
-                if(isSideBarOn==true){
-                  sideBarIcon=Icon(Icons.view_sidebar);
-                }
-                else{
-                  sideBarIcon=Icon(Icons.view_sidebar_outlined);
+                if (isSideBarOn == true) {
+                  sideBarIcon = Icon(Icons.view_sidebar);
+                } else {
+                  sideBarIcon = Icon(Icons.view_sidebar_outlined);
                 }
               });
             },
@@ -239,8 +358,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                   borderSide: BorderSide(
-                                      color:
-                                          Colors.grey.shade300), // same as enabled
+                                      color: Colors
+                                          .grey.shade300), // same as enabled
                                 ),
                                 hintText: "Input",
                               ),
@@ -249,20 +368,19 @@ class _MyHomePageState extends State<MyHomePage> {
                             ),
                             SizedBox(height: 10.0),
                             Container(
-                                padding: EdgeInsets.all(16.0),
-                                width: double.infinity,
-                                height:200,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                child: SingleChildScrollView(
-                                  child: Text(_output,
-                                      style: TextStyle(
-                                          fontFamily: 'Courier', fontSize: 16)),
-                                ),
+                              padding: EdgeInsets.all(16.0),
+                              width: double.infinity,
+                              height: 200,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(8.0),
                               ),
-                            
+                              child: SingleChildScrollView(
+                                child: Text(_output,
+                                    style: TextStyle(
+                                        fontFamily: 'Courier', fontSize: 16)),
+                              ),
+                            ),
                           ],
                         ),
                       ))
@@ -271,8 +389,10 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
       ),
-      drawer: SaveCode(),
-      
+      drawer: SaveCode(
+        savedFile: savedFile,
+        onFileTap: openSavedFile,
+      ),
     );
   }
 }

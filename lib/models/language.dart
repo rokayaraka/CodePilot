@@ -1,8 +1,14 @@
-
+import 'package:hive/hive.dart';
+part 'language.g.dart';
+@HiveType(typeId: 1)
 class Language {
+  @HiveField(0)
   final String language;
+  @HiveField(1)
   final String version;
+  @HiveField(2)
   final List<String> aliases;
+  @HiveField(3)
   final String? runtime;
 
   Language({
