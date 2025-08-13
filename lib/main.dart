@@ -173,12 +173,21 @@ class _MyHomePageState extends State<MyHomePage> {
           IconButton(onPressed: (){
             setState(() {
               _codeController.clear();
+              _inputController.clear();
+              _output = "Output will be displayed here";
             });
 
           }, 
           icon: Icon(Icons.cleaning_services)
           ),
+          IconButton(onPressed: (){
+            setState(() {
+              
+            });
 
+          }, 
+          icon: Icon(Icons.save)
+          ),
           IconButton(
             onPressed: () {
               setState(() {
@@ -256,15 +265,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       drawer: SaveCode(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: (){},
-        elevation: 10,
-        
-        backgroundColor: Colors.black12.withOpacity(.2),
-        child: Icon(Icons.save,color: Colors.grey.shade100,),
-        
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.miniEndFloat,
+      
     );
   }
 }
