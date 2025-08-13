@@ -45,6 +45,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  Icon sideBarIcon=Icon(Icons.view_sidebar);
   late Future<List<Language>> languagesFuture;
   Language? selectedLanguage;
   final TextEditingController _codeController = TextEditingController(text: "");
@@ -192,9 +193,15 @@ class _MyHomePageState extends State<MyHomePage> {
             onPressed: () {
               setState(() {
                 isSideBarOn = !isSideBarOn;
+                if(isSideBarOn==true){
+                  sideBarIcon=Icon(Icons.view_sidebar);
+                }
+                else{
+                  sideBarIcon=Icon(Icons.view_sidebar_outlined);
+                }
               });
             },
-            icon: Icon(Icons.view_sidebar),
+            icon: sideBarIcon,
           ),
         ],
       ),
