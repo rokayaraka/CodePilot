@@ -1,6 +1,7 @@
 import 'package:codepilot/api_services.dart';
 import 'package:codepilot/drawer.dart';
 import 'package:codepilot/editor.dart';
+import 'package:codepilot/functions/keyword.dart';
 import 'package:codepilot/models/language.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -47,7 +48,7 @@ class MyHomePage extends StatefulWidget {
 
   @override
   // ignore: library_private_types_in_public_api
-  _MyHomePageState createState() => _MyHomePageState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -61,6 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String _output = "Output will be displayed here";
   bool isSideBarOn = true;
   bool isLoading = false;
+  bool isFlexAble = false;
   @override
   void initState() {
     super.initState();
@@ -76,16 +78,131 @@ class _MyHomePageState extends State<MyHomePage> {
     _fileNameController.dispose();
     super.dispose();
   }
-
-  void openSavedFile(Code code) {
-    setState(() {
-      _codeController.text = code.code;
-      selectedLanguage = code.language;
-      _inputController.text = ""; // Clear input field
-      _output = "Output will be displayed here"; // Reset output
+  //open saved file function
+  void openSavedFile(Code code) async {
+  final langs = await languagesFuture;
+  final lang = langs.firstWhere(
+    (l) => l.language == code.language.language,
+    orElse: () => code.language,
+  );
+  setState(() {
+    _codeController.text = code.code;
+    selectedLanguage = lang;
+    _inputController.text = "";
+    if(selectedLanguage!.language=="python"||selectedLanguage!.language=="c"||selectedLanguage!.language=="c++"){
+      isFlexAble=true;
+    }
+  });
+}
+  void generateKeyword(BuildContext context)async{
+    String language="";
+    if(selectedLanguage!.language=="python"){
+      language="python";
+    }
+    else if(selectedLanguage!.language=="c"){
+      language="c";
+    }
+    else if(selectedLanguage!.language=="c++"){
+      language="c++";
+    }
+    final keywords= await ApiServices.keywordGenerator(code: _codeController.text, language: language);
+    final keywordMap = keyword(keywords);
+    showModalBottomSheet(
+    context: context, 
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (context) {
+      return Container(
+        
+        padding: EdgeInsets.all(16),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Generated Keywords and Identifiers',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Divider(
+                color: Colors.grey.shade400,
+                thickness: 1.5,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text(
+                    'Keywords(Total: ${keywordMap['keywords']?.length ?? 0}):',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Identifiers(Total: ${keywordMap['identifiers']?.length ?? 0}):',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Divider(
+                color: Colors.grey.shade400,
+                thickness: 1.5,
+              ),
+              IntrinsicHeight(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final keyword in keywordMap['keywords'] ?? [])
+                          Text(
+                            keyword,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 16,
+                            ),
+                          ),
+                      ],
+                    ),
+                     VerticalDivider(
+                        color: Colors.grey.shade400,
+                        thickness: 1.5,
+                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final identifier in keywordMap['identifiers'] ?? [])
+                          Text(
+                            identifier,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 16,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('Close'),
+              ),
+            ],
+          ),
+        ),
+      );
     });
   }
-
+  //on file save function
   void saveFile() {
     showDialog(
         context: context,
@@ -107,6 +224,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         final fileName = _fileNameController.text.trim();
                         if (fileName.isNotEmpty&& selectedLanguage!=null) {
                           final box = Hive.box<Code>('codes');
+                          
                           box.put(
                               fileName,
                               Code(
@@ -115,7 +233,15 @@ class _MyHomePageState extends State<MyHomePage> {
                                   date: DateTime.now(),
                                   language: selectedLanguage!));
                           setState(() {
-                            savedFile.add(box.get(fileName)!);
+                            for (final iterate in savedFile){
+                              if (iterate.fileName == fileName) {
+                                iterate.code = _codeController.text;
+                                iterate.date = DateTime.now();
+                                iterate.language = selectedLanguage!;
+                                break;
+                              }
+                              savedFile.add(box.get(fileName)!);
+                            }
                             _fileNameController.clear();
                           });
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -176,7 +302,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ));
   }
-
+  // run button function 
   void _runcode() async {
     setState(() {
       isLoading = !isLoading;
@@ -217,7 +343,7 @@ class _MyHomePageState extends State<MyHomePage> {
       isLoading = !isLoading;
     });
   }
-
+  //app first screen
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -235,9 +361,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Center(
                       child: SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2))),
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator(strokeWidth: 3,
+                          color: Colors.grey.shade400,
+                          ))),
                 );
                 
               } else if (snapshot.hasError) {
@@ -253,14 +381,16 @@ class _MyHomePageState extends State<MyHomePage> {
                 final languages = snapshot.data!;
                 return DropdownButtonHideUnderline(
                   child: DropdownButton<Language>(
+                    
                     value: languages.contains(selectedLanguage)
                         ? selectedLanguage
-                        : languages.first,
+                        : (selectedLanguage=languages.first),
                     dropdownColor: Theme.of(context).canvasColor,
                     icon: Icon(Icons.arrow_drop_down,
                         color: Colors.grey.shade300),
                     items: languages.map((lang) {
                       return DropdownMenuItem<Language>(
+                        alignment: Alignment.centerLeft,
                         value: lang,
                         child: Text(
                           '${lang.language} (${lang.version})',
@@ -273,6 +403,12 @@ class _MyHomePageState extends State<MyHomePage> {
                     onChanged: (Language? newLang) {
                       setState(() {
                         selectedLanguage = newLang;
+                        if(selectedLanguage!.language=="python"||selectedLanguage!.language=="c"||selectedLanguage!.language=="c++") {
+                          isFlexAble = true;
+                        }
+                        else{
+                          isFlexAble=false;
+                        }
                       });
                     },
                   ),
@@ -282,9 +418,7 @@ class _MyHomePageState extends State<MyHomePage> {
               }
             },
           ),
-          SizedBox(
-            width: 10,
-          ),
+         
           !isLoading
               ? IconButton(
                   onPressed: _runcode,
@@ -299,6 +433,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.grey,
                   ),
                 ),
+          isFlexAble?
+          IconButton(
+            onPressed: (){
+              generateKeyword(context);
+            }, 
+            icon: Icon(Icons.generating_tokens, color: Colors.grey.shade400)
+          ): SizedBox(),
           IconButton(
               onPressed: () {
                 setState(() {

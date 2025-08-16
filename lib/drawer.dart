@@ -33,7 +33,7 @@ class SaveCode extends StatelessWidget{
                       Icon(Icons.file_open,color: Theme.of(context).colorScheme.inverseSurface,),
                       const SizedBox(width: 5,),
                       Text("Saved Files!",style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                        color: Theme.of(context).colorScheme.inverseSurface,
+                        color: Colors.grey.shade300,
                       ),),
                     ],
                   ),
@@ -51,7 +51,7 @@ class SaveCode extends StatelessWidget{
                 child: ListView.builder(
                   itemCount: savedFile.length,
                   itemBuilder: (context, index) {
-                    final code = savedFile[index];
+                    final  code = savedFile[index];
                     return Dismissible(
                       key: Key(code.fileName),
                       direction: DismissDirection.horizontal,

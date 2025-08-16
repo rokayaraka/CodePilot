@@ -4,6 +4,27 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiServices {
+  static Future<String>keywordGenerator({
+    required String code,
+    required String language,
+  }) async {
+    final response=await http.post(
+    Uri.parse('https://rokayaraka.pythonanywhere.com/flex/flex/'),
+    headers: {'Content-Type': 'application/json'},
+    body: json.encode({
+      "code": code,
+      "language": language,
+    }),
+  );
+  if (response.statusCode == 200) {
+    final Map<String, dynamic> result = json.decode(response.body);
+    return result['output'].toString();
+    
+  } else {
+    throw Exception('Failed to generate keywords');
+  }
+}
+
   static Future<List<Language>> fetchLanguages() async {
     final response =
         await http.get(Uri.parse('https://emkc.org/api/v2/piston/runtimes'));
