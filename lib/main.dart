@@ -3,6 +3,7 @@ import 'package:codepilot/drawer.dart';
 import 'package:codepilot/editor.dart';
 import 'package:codepilot/functions/keyword.dart';
 import 'package:codepilot/models/language.dart';
+import 'package:codepilot/overlayWidget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/adapters.dart';
@@ -63,6 +64,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool isSideBarOn = true;
   bool isLoading = false;
   bool isFlexAble = false;
+  bool keywordLoading=false;
   @override
   void initState() {
     super.initState();
@@ -105,101 +107,20 @@ class _MyHomePageState extends State<MyHomePage> {
     else if(selectedLanguage!.language=="c++"){
       language="c++";
     }
+    setState(() {
+      keywordLoading=true;
+    });
     final keywords= await ApiServices.keywordGenerator(code: _codeController.text, language: language);
+    setState(() {
+      keywordLoading=false;
+    });
     final keywordMap = keyword(keywords);
     showModalBottomSheet(
     context: context, 
     useSafeArea: true,
     isScrollControlled: true,
     builder: (context) {
-      return Container(
-        
-        padding: EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Generated Keywords and Identifiers',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Divider(
-                color: Colors.grey.shade400,
-                thickness: 1.5,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Text(
-                    'Keywords(Total: ${keywordMap['keywords']?.length ?? 0}):',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Identifiers(Total: ${keywordMap['identifiers']?.length ?? 0}):',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              Divider(
-                color: Colors.grey.shade400,
-                thickness: 1.5,
-              ),
-              IntrinsicHeight(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final keyword in keywordMap['keywords'] ?? [])
-                          Text(
-                            keyword,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 16,
-                            ),
-                          ),
-                      ],
-                    ),
-                     VerticalDivider(
-                        color: Colors.grey.shade400,
-                        thickness: 1.5,
-                      ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final identifier in keywordMap['identifiers'] ?? [])
-                          Text(
-                            identifier,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 16,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text('Close'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return OverlayWidget(keywordMap: keywordMap);
     });
   }
   //on file save function
@@ -433,7 +354,15 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.grey,
                   ),
                 ),
-          isFlexAble?
+          keywordLoading?
+          SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.grey,
+                  ),
+                )
+          :isFlexAble?
           IconButton(
             onPressed: (){
               generateKeyword(context);
