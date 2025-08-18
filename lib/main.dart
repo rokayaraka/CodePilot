@@ -154,6 +154,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                   date: DateTime.now(),
                                   language: selectedLanguage!));
                           setState(() {
+                            
                             for (final iterate in savedFile){
                               if (iterate.fileName == fileName) {
                                 iterate.code = _codeController.text;
@@ -161,8 +162,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                 iterate.language = selectedLanguage!;
                                 break;
                               }
-                              savedFile.add(box.get(fileName)!);
                             }
+                            savedFile.add(box.get(fileName)!);
                             _fileNameController.clear();
                           });
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -375,6 +376,25 @@ class _MyHomePageState extends State<MyHomePage> {
                   _codeController.clear();
                   _inputController.clear();
                   _output = "Output will be displayed here";
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Cleared!',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            )
+                            , duration: Duration(seconds: 2),
+                            backgroundColor: Colors.green,
+                            ),
+                  );
                 });
               },
               icon: Icon(Icons.cleaning_services)),
